@@ -1,0 +1,32 @@
+{
+    "tasks": [
+        {
+            "type": "cppbuild",
+            "label": "C/C++: g++.exe build active file (SDL2)",
+            "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-g",
+                "${file}",
+                "-o",
+                "${fileDirname}\\${fileBasenameNoExtension}.exe",
+                "-IC:/msys64/ucrt64/include/SDL2",  // Chỉ định đường dẫn include
+                "-LC:/msys64/ucrt64/lib",          // Chỉ định đường dẫn thư viện
+                "-lSDL2",                           // Liên kết SDL2
+                "-lSDL2_image"                      // Liên kết SDL2_image
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Task modified for SDL2 support."
+        }
+    ],
+    "version": "2.0.0"
+}
