@@ -2,24 +2,26 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: g++.exe build active file (SDL2)",
+            "label": "C/C++: gcc.exe build active file",
             "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
-                "${file}",
+                "main.cpp",
+                "Chicken.cpp",
+                "Map.cpp",
                 "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe",
+                "main.exe",
                 "-IC:/msys64/ucrt64/include/SDL2",
                 "-LC:/msys64/ucrt64/lib",
-                "-lmingw32",  
-                "-lSDL2main",  
+                "-lmingw32",
+                "-lSDL2main",
                 "-lSDL2",
                 "-lSDL2_image",
-                "-mwindows"    
+                "-mwindows"
             ],
             "options": {
-                "cwd": "${fileDirname}"
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": [
                 "$gcc"
