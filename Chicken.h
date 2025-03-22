@@ -13,6 +13,8 @@ public:
     bool handleInput();
     void render();
 
+    static const int MIN_JUMP_FORCE = -10;  // Độ cao tối thiểu (lực nhảy tối thiểu)
+
 private:
     SDL_Rect chickenClips[3]; 
     void setupAnimation();
@@ -26,7 +28,8 @@ private:
     int frameCounter;
     int jumpTime;
     int jumpCount;
-    int firstJumpForce;
+    int jumpCharge;      // Lực nhảy tích lũy khi giữ phím
+    int savedJumpForce;  // Lưu lực nhảy lần đầu để dùng cho lần 2
 
     SDL_Texture* loadTexture(const char* path);
 };
