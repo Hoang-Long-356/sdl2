@@ -2,21 +2,36 @@
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
+#include <cmath>
+#include <vector>
 
-const int SCREEN_WIDTH = 800;
+const int SCREEN_WIDTH = 900;
 const int SCREEN_HEIGHT = 700;
+const float SPEED = 5.0f;
+const int LEFT_BOUNDARY = 193;
+const int RIGHT_BOUNDARY = 728;
+const int GROUND_LEVEL = 505;
+const int TOP_BOUNDARY = 61;
+const int SAW_SIZE = 50;
 
 Map::Map(SDL_Renderer* renderer) : renderer(renderer) {
     sawTexture = loadTexture("images/saw.png");
     bgTexture = loadTexture("images/bg.png");
-    
+
     if (!bgTexture) {
         std::cout << "Background image failed to load.\n";
     }
 
     srand(static_cast<unsigned>(time(0)));
-    for (int i = 0; i < 5; i++) {
-        saws[i] = {rand() % (SCREEN_WIDTH - 200) + 100, 50, 50, 50};
+
+    int numSaws = rand() % 5 + 3;  
+    for (int i = 0; i < numSaws; i++) {
+        float angle = (rand() % 31 + 30) * M_PI / 180;
+        saws.push_back({
+            {rand() % (RIGHT_BOUNDARY - LEFT_BOUNDARY) + LEFT_BOUNDARY, rand() % 200 + 50, SAW_SIZE, SAW_SIZE},
+            SPEED * cos(angle),
+            SPEED * sin(angle)
+        });
     }
 }
 
@@ -32,34 +47,36 @@ SDL_Texture* Map::loadTexture(const char* path) {
 }
 
 void Map::update() {
-    for (int i = 0; i < 5; i++) {
-        saws[i].y += 5;
-        if (saws[i].y > SCREEN_HEIGHT - 50) {
-            saws[i].y = 50;
-            saws[i].x = rand() % (SCREEN_WIDTH - 200) + 100;
+    for (auto& saw : saws) {
+        saw.rect.x += saw.vx;
+        saw.rect.y += saw.vy;
+
+        // Va vào tường trái/phải
+        if (saw.rect.x <= LEFT_BOUNDARY || saw.rect.x + saw.rect.w >= RIGHT_BOUNDARY) {
+            saw.vx = -saw.vx; 
+        }
+
+        // Va vào mặt đất
+        if (saw.rect.y + saw.rect.h >= GROUND_LEVEL) {
+            saw.rect.y = GROUND_LEVEL - saw.rect.h;
+            saw.vy = -saw.vy;
+        }
+
+        // Biến mất khi bay lên trên
+        if (saw.rect.y < TOP_BOUNDARY) {
+            float angle = (rand() % 31 + 30) * M_PI / 180;
+            saw.rect = {rand() % (RIGHT_BOUNDARY - LEFT_BOUNDARY) + LEFT_BOUNDARY, TOP_BOUNDARY, SAW_SIZE, SAW_SIZE};
+            saw.vx = SPEED * cos(angle);
+            saw.vy = SPEED * sin(angle);
         }
     }
 }
 
 void Map::render() {
-    // Định nghĩa khung viền frameBox
-    SDL_Rect frameBox = {100, 50, SCREEN_WIDTH - 200, SCREEN_HEIGHT - 100};
+    SDL_Rect bgRect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+    SDL_RenderCopy(renderer, bgTexture, nullptr, &bgRect);
 
-    // Giới hạn khu vực vẽ trong frameBox
-    SDL_RenderSetClipRect(renderer, &frameBox);
-
-    // Vẽ background bên trong frameBox
-    SDL_RenderCopy(renderer, bgTexture, nullptr, &frameBox);
-
-    // Vẽ các lưỡi cưa bên trong frameBox
-    for (int i = 0; i < 5; i++) {
-        SDL_RenderCopy(renderer, sawTexture, nullptr, &saws[i]);
+    for (auto& saw : saws) {
+        SDL_RenderCopy(renderer, sawTexture, nullptr, &saw.rect);
     }
-
-    // Xóa giới hạn clip (để các đối tượng khác không bị ảnh hưởng)
-    SDL_RenderSetClipRect(renderer, nullptr);
-
-    // Vẽ khung viền frameBox
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255); // Màu đỏ
-    SDL_RenderDrawRect(renderer, &frameBox);
 }

@@ -4,7 +4,7 @@
 #include "Chicken.h"
 #include "Map.h"
 
-const int SCREEN_WIDTH = 800;
+const int SCREEN_WIDTH = 900;
 const int SCREEN_HEIGHT = 700;
 
 SDL_Window* window = nullptr;

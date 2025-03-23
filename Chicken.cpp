@@ -2,22 +2,27 @@
 #include <iostream>
 
 const int CHICKEN_SPEED = 5;
-const int GRAVITY = 1;  // Trọng Lực
+const int GRAVITY = 1;
 const int FRAME_DELAY = 5;
-const int BASE_JUMP_FORCE = -10;  // Lực nhảy cơ bản lần đầu
-const int JUMP_LIMIT = 2;         // Giới hạn số lần nhảy
-const int MAX_JUMP_CHARGE = -18;  // Lực nhảy tối đa lần đầu khi giữ lâu
-const int CHARGE_RATE = 2;        // Tốc độ tích lực nhảy khi giữ phím
-const int MAX_CHARGE_TIME = 15;   // Giới hạn thời gian tích lực (30 frames ~ 0.5 giây ở 60 FPS)
-const float SECOND_JUMP_FACTOR = 0.7f;  // Lực nhảy lần 2 bằng 70% lần 1
-const int SCREEN_WIDTH = 800; // Chiều rộng màn hình
-const int CHICKEN_WIDTH = 200; 
+const int JUMP_LIMIT = 2;
+const int MAX_JUMP_CHARGE = -17;
+const int CHARGE_RATE = 1;
+const int MAX_CHARGE_TIME = 15;
+const float SECOND_JUMP_FACTOR = 0.9f;
+const int SCREEN_WIDTH = 900;
+const int CHICKEN_WIDTH = 200;
+const int MIN_JUMP_FORCE = -7;
+
+const int LEFT_BOUNDARY = 193;
+const int RIGHT_BOUNDARY = 728;
+const int GROUND_LEVEL = 505;
+const int TOP_BOUNDARY = 61;
 
 Chicken::Chicken(SDL_Renderer* renderer)
     : renderer(renderer), velocityY(0), isJumping(false), facingLeft(false),
       frame(0), frameCounter(0), jumpTime(0), jumpCount(0), jumpCharge(0), savedJumpForce(0) {
     texture = loadTexture("images/chicken.png");
-    chickenRect = {400, 550, 200, 200};
+    chickenRect = {SCREEN_WIDTH/2, GROUND_LEVEL, 200, 200};
     setupAnimation();
 }
 
@@ -43,58 +48,49 @@ bool Chicken::handleInput() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) return false;
-        // Xử lý nhảy khi nhấn phím UP
+        
         if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_UP) {
-            if (jumpCount < JUMP_LIMIT) {  // Kiểm tra giới hạn nhảy
+            if (jumpCount < JUMP_LIMIT) {
                 if (jumpCount == 0) {
-                    // Nhảy lần đầu
-                    jumpCharge = BASE_JUMP_FORCE;  // Lực cơ bản lần đầu
-                    if (jumpCharge > -10) jumpCharge = -10;  // Nếu lực nhảy lần đầu > -10 thì đặt = -10
+                    jumpCharge = MIN_JUMP_FORCE;
                     velocityY = jumpCharge;
-                    savedJumpForce = jumpCharge;  // Lưu lực nhảy lần đầu
+                    savedJumpForce = jumpCharge;
                 } else if (jumpCount == 1) {
-                    // Nhảy lần thứ hai bằng 70% lực nhảy lần đầu
-                    jumpCharge = static_cast<int>(savedJumpForce * SECOND_JUMP_FACTOR);  
-                    if (jumpCharge > MIN_JUMP_FORCE) jumpCharge = MIN_JUMP_FORCE;  // Giới hạn lực nhảy thấp nhất
+                    jumpCharge = static_cast<int>(savedJumpForce * SECOND_JUMP_FACTOR);
                     velocityY = jumpCharge;
                 }
                 isJumping = true;
-                jumpTime = 0;  // Reset thời gian tích lực
-                jumpCount++;   // Tăng số lần nhảy
-            }  
+                jumpTime = 0;
+                jumpCount++;
+            }
         }
     }
-
+    
     const Uint8* keystate = SDL_GetKeyboardState(NULL);
 
-    // Di chuyển sang trái và phải
     if (keystate[SDL_SCANCODE_LEFT]) {
-        if (chickenRect.x > 0) { // Giới hạn biên trái
+        if (chickenRect.x > LEFT_BOUNDARY) {
             chickenRect.x -= CHICKEN_SPEED;
         }
         facingLeft = true;
     } else if (keystate[SDL_SCANCODE_RIGHT]) {
-        if (chickenRect.x + CHICKEN_WIDTH < SCREEN_WIDTH) { // Giới hạn biên phải
+        if (chickenRect.x + CHICKEN_WIDTH < RIGHT_BOUNDARY) {
             chickenRect.x += CHICKEN_SPEED;
         }
         facingLeft = false;
     }
 
-    // Tích lực nhảy khi giữ phím UP (chỉ cho lần đầu)
     if (keystate[SDL_SCANCODE_UP] && isJumping && jumpCount == 1) {
         if (jumpTime < MAX_CHARGE_TIME) {
-            jumpCharge -= CHARGE_RATE;  // Tăng lực nhảy khi giữ phím
-            if (jumpCharge < MAX_JUMP_CHARGE) {
-                jumpCharge = MAX_JUMP_CHARGE;  // Giới hạn lực tối đa
-            }
-            if (jumpCharge > MIN_JUMP_FORCE) jumpCharge = MIN_JUMP_FORCE;  // Giới hạn lực nhảy thấp nhất
-            velocityY = jumpCharge;  // Cập nhật vận tốc
-            savedJumpForce = jumpCharge;  // Cập nhật lực nhảy lần đầu nếu giữ phím
-            jumpTime++;              // Tăng thời gian tích lực
+            jumpCharge -= CHARGE_RATE;
+            if (jumpCharge < MAX_JUMP_CHARGE) jumpCharge = MAX_JUMP_CHARGE;
+            if (jumpCharge > MIN_JUMP_FORCE) jumpCharge = MIN_JUMP_FORCE;
+            velocityY = jumpCharge;
+            savedJumpForce = jumpCharge;
+            jumpTime++;
         }
     }
 
-    // Cập nhật hoạt ảnh khi di chuyển
     if (keystate[SDL_SCANCODE_LEFT] || keystate[SDL_SCANCODE_RIGHT]) {
         frameCounter++;
         if (frameCounter >= FRAME_DELAY) {
@@ -108,15 +104,19 @@ bool Chicken::handleInput() {
 
 void Chicken::update() {
     if (isJumping) {
-        velocityY += GRAVITY;  // Áp dụng trọng lực
+        velocityY += GRAVITY;
         chickenRect.y += velocityY;
 
-        // Kiểm tra hạ cánh
-        if (chickenRect.y >= 550) {
-            chickenRect.y = 550;
+        if (chickenRect.y >= GROUND_LEVEL) {
+            chickenRect.y = GROUND_LEVEL;
             isJumping = false;
             velocityY = 0;
-            jumpCount = 0;  // Reset số lần nhảy khi chạm đất
+            jumpCount = 0;
+        }
+
+        if (chickenRect.y <= TOP_BOUNDARY) {
+            chickenRect.y = TOP_BOUNDARY;
+            velocityY = 0;
         }
     }
 }
