@@ -10,6 +10,7 @@
                 "main.cpp",
                 "Chicken.cpp",
                 "Map.cpp",
+                "Saw.cpp",  // Thêm dòng này để biên dịch Saw.cpp
                 "-o",
                 "main.exe",
                 "-IC:/msys64/ucrt64/include/SDL2",
@@ -30,7 +31,7 @@
                 "kind": "build",
                 "isDefault": true
             },
-            "detail": "Task modified for SDL2 support."
+            "detail": "Task modified for SDL2 support with Saw.cpp."
         }
     ],
     "version": "2.0.0"

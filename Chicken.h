@@ -16,10 +16,13 @@ public:
     static const int MIN_JUMP_FORCE = -10;  // Độ cao tối thiểu (lực nhảy tối thiểu)
 
 private:
-    SDL_Rect chickenClips[3]; 
+    SDL_Rect idleClips[6];          // 6 frame cho chicken.png (60x62)
+    SDL_Rect runClips[7];           // 7 frame cho chickenrun.png (60x59)
     void setupAnimation();
     SDL_Renderer* renderer;
-    SDL_Texture* texture;
+    SDL_Texture* idleTexture;       // Texture khi đứng yên
+    SDL_Texture* runTexture;        // Texture khi chạy
+    SDL_Texture* currentTexture;    // Texture hiện tại
     SDL_Rect chickenRect;
     int velocityY;
     bool isJumping;
@@ -30,6 +33,7 @@ private:
     int jumpCount;
     int jumpCharge;      // Lực nhảy tích lũy khi giữ phím
     int savedJumpForce;  // Lưu lực nhảy lần đầu để dùng cho lần 2
+    bool isMoving;       // Trạng thái di chuyển
 
     SDL_Texture* loadTexture(const char* path);
 };

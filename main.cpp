@@ -3,13 +3,14 @@
 #include <iostream>
 #include "Chicken.h"
 #include "Map.h"
+#include "Saw.h"
+#include <vector>
 
 const int SCREEN_WIDTH = 900;
 const int SCREEN_HEIGHT = 700;
 
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
-SDL_Texture* bgTexture = nullptr;
 
 bool init() {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) return false;
@@ -26,7 +27,6 @@ bool init() {
 }
 
 void cleanUp() {
-    SDL_DestroyTexture(bgTexture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     IMG_Quit();
@@ -39,6 +39,9 @@ int main(int argc, char* argv[]) {
     Chicken chicken(renderer);
     Map gameMap(renderer);
 
+    // Tạo danh sách cưa từ Saw::createSaws
+    std::vector<Saw> saws = Saw::createSaws(renderer);
+
     bool running = true;
     Uint32 frameStart;
     int frameTime;
@@ -49,14 +52,18 @@ int main(int argc, char* argv[]) {
 
         running = chicken.handleInput();
         chicken.update();
-        gameMap.update();
+        for (auto& saw : saws) {
+            saw.update(); // Cập nhật từng cưa
+        }
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-      
-        gameMap.render();
+        gameMap.render(); // Chỉ vẽ nền
         chicken.render();
+        for (auto& saw : saws) {
+            saw.render(); // Vẽ từng cưa
+        }
 
         SDL_RenderPresent(renderer);
 
