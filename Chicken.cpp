@@ -5,7 +5,7 @@ const int CHICKEN_SPEED = 5;
 const int GRAVITY = 1;
 const int FRAME_DELAY = 5;
 const int JUMP_LIMIT = 2;
-const int MAX_JUMP_CHARGE = -17;
+const int MAX_JUMP_CHARGE = -15;
 const int CHARGE_RATE = 1;
 const int MAX_CHARGE_TIME = 15;
 const float SECOND_JUMP_FACTOR = 0.9f;
@@ -14,14 +14,14 @@ const int CHICKEN_WIDTH = 200;
 const int MIN_JUMP_FORCE = -7;
 
 const int LEFT_BOUNDARY = 193;
-const int RIGHT_BOUNDARY = 728;
+const int RIGHT_BOUNDARY = 729;
 const int GROUND_LEVEL = 505;
 const int TOP_BOUNDARY = 61;
 
 Chicken::Chicken(SDL_Renderer* renderer)
     : renderer(renderer), velocityY(0), isJumping(false), facingLeft(false),
       frame(0), frameCounter(0), jumpTime(0), jumpCount(0), jumpCharge(0), savedJumpForce(0) {
-    texture = loadTexture("images/chicken.png");
+    texture = loadTexture("images/chickenrun.png");
     chickenRect = {SCREEN_WIDTH/2, GROUND_LEVEL, 200, 200};
     setupAnimation();
 }

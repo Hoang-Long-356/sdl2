@@ -5,6 +5,8 @@
 #include <SDL_image.h>
 #include <vector>
 
+const int FRAME_COUNT = 3; // Số frame trong sprite sheet
+
 struct Saw {
     SDL_Rect rect;
     float vx, vy;
@@ -20,12 +22,16 @@ public:
 
 private:
     SDL_Renderer* renderer;
-    SDL_Texture* sawTexture;
     SDL_Texture* bgTexture;
-    std::vector<Saw> saws;  // Dùng vector để lưu lưỡi cưa
-    SDL_Rect frameBox;
+    SDL_Texture* sawTexture; // Sprite sheet chứa 3 frame
+    SDL_Rect sawClips[FRAME_COUNT]; // Mảng chứa vị trí frame trong sprite sheet
+
+    std::vector<Saw> saws;
+    int currentFrame;
+    Uint32 lastFrameTime;
 
     SDL_Texture* loadTexture(const char* path);
+    void setupAnimation(); // Cắt frame từ sprite sheet
 };
 
 #endif
