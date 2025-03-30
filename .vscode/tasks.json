@@ -4,21 +4,23 @@
             "type": "cppbuild",
             "label": "C/C++: gcc.exe build active file",
             "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
-            "args": [
+           "args": [
                 "-fdiagnostics-color=always",
                 "-g",
                 "main.cpp",
                 "Chicken.cpp",
                 "Map.cpp",
-                "Saw.cpp",  // Thêm dòng này để biên dịch Saw.cpp
+                "Saw.cpp",
                 "-o",
                 "main.exe",
                 "-IC:/msys64/ucrt64/include/SDL2",
                 "-LC:/msys64/ucrt64/lib",
                 "-lmingw32",
                 "-lSDL2main",
+                "-lSDL2_mixer",
                 "-lSDL2",
                 "-lSDL2_image",
+                "-lwinmm",  // Thêm dòng này
                 "-mwindows"
             ],
             "options": {
@@ -31,7 +33,7 @@
                 "kind": "build",
                 "isDefault": true
             },
-            "detail": "Task modified for SDL2 support with Saw.cpp."
+            "detail": "Task modified for SDL2 and SDL2_mixer support with Saw.cpp."
         }
     ],
     "version": "2.0.0"

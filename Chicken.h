@@ -16,7 +16,7 @@ public:
     static const int MIN_JUMP_FORCE = -10;  // Độ cao tối thiểu (lực nhảy tối thiểu)
 
 private:
-    SDL_Rect idleClips[6];          // 6 frame cho chicken.png (60x62)
+    SDL_Rect idleClips[6];          // 6 frame cho chicken.png (60x65 )
     SDL_Rect runClips[7];           // 7 frame cho chickenrun.png (60x59)
     void setupAnimation();
     SDL_Renderer* renderer;
