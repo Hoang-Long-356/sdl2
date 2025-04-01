@@ -58,12 +58,9 @@ void Chicken::setupAnimation() {
     runClips[6] = {0, 114, 60, 57};     // Hàng 2, cột 0
 }
 
-bool Chicken::handleInput() {
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_QUIT) return false;
-
-        if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_UP) {
+bool Chicken::handleInput(const SDL_Event& event) {
+    if (event.type == SDL_KEYDOWN) {
+        if (event.key.keysym.scancode == SDL_SCANCODE_UP) {
             if (jumpCount < JUMP_LIMIT) {
                 if (jumpCount == 0) {
                     jumpCharge = MIN_JUMP_FORCE;
@@ -80,67 +77,54 @@ bool Chicken::handleInput() {
         }
     }
 
+    // Kiểm tra trạng thái phím để charge jump
     const Uint8* keystate = SDL_GetKeyboardState(NULL);
-
-    if (keystate[SDL_SCANCODE_LEFT]) {
-        if (chickenRect.x > LEFT_BOUNDARY) {
-            chickenRect.x -= CHICKEN_SPEED;
-        }
-        facingLeft = true;
-        isMoving = true;
-    } else if (keystate[SDL_SCANCODE_RIGHT]) {
-        if (chickenRect.x + chickenRect.w < RIGHT_BOUNDARY) {
-            chickenRect.x += CHICKEN_SPEED;
-        }
-        facingLeft = false;
-        isMoving = true;
-    } else {
-        isMoving = false;
-    }
-
-    // Xử lý chuyển đổi texture trực tiếp giữa idle và run
-    if (isMoving && currentTexture != runTexture) {
-        currentTexture = runTexture;
-        chickenRect.w = 60;
-        chickenRect.h = 57; // Chiều cao cho chickenrun.png
-        frame = 0;
-    } else if (!isMoving && currentTexture != idleTexture) {
-        currentTexture = idleTexture;
-        chickenRect.w = 60;
-        chickenRect.h = 64; // Chiều cao cho chicken.png
-        frame = 0;
-    }
-
-    // Cập nhật frame animation
-    if (isMoving) {
-        frameCounter++;
-        if (frameCounter >= FRAME_DELAY) {
-            frame = (frame + 1) % 7; // 7 frame cho run
-            frameCounter = 0;
-        }
-    } else {
-        frameCounter++;
-        if (frameCounter >= FRAME_DELAY) {
-            frame = (frame + 1) % 6; // 6 frame cho idle
-            frameCounter = 0;
-        }
-    }
-
     if (keystate[SDL_SCANCODE_UP] && isJumping && jumpCount == 1) {
         if (jumpTime < MAX_CHARGE_TIME) {
             jumpCharge -= CHARGE_RATE;
             if (jumpCharge < MAX_JUMP_CHARGE) jumpCharge = MAX_JUMP_CHARGE;
-            if (jumpCharge > MIN_JUMP_FORCE) jumpCharge = MIN_JUMP_FORCE;
             velocityY = jumpCharge;
             savedJumpForce = jumpCharge;
             jumpTime++;
         }
     }
 
+    // Cập nhật trạng thái di chuyển dựa trên trạng thái phím
+    bool wasMoving = isMoving;
+    isMoving = keystate[SDL_SCANCODE_LEFT] || keystate[SDL_SCANCODE_RIGHT];
+
+    // Cập nhật hướng mặt
+    if (keystate[SDL_SCANCODE_LEFT] && chickenRect.x > LEFT_BOUNDARY) {
+        facingLeft = true;
+    }
+    else if (keystate[SDL_SCANCODE_RIGHT] && chickenRect.x + chickenRect.w < RIGHT_BOUNDARY) {
+        facingLeft = false;
+    }
+
+    // Cập nhật texture và animation
+    if (isMoving && currentTexture != runTexture) {
+        currentTexture = runTexture;
+        chickenRect.w = 60;
+        chickenRect.h = 57;
+        frame = 0;
+    } else if (!isMoving && currentTexture != idleTexture) {
+        currentTexture = idleTexture;
+        chickenRect.w = 60;
+        chickenRect.h = 65;
+        frame = 0;
+    }
+
+    frameCounter++;
+    if (frameCounter >= FRAME_DELAY) {
+        frame = (frame + 1) % (isMoving ? 7 : 6);
+        frameCounter = 0;
+    }
+
     return true;
 }
 
 void Chicken::update() {
+    // Xử lý nhảy như trước
     if (isJumping) {
         velocityY += GRAVITY;
         chickenRect.y += velocityY;
@@ -150,12 +134,22 @@ void Chicken::update() {
             isJumping = false;
             velocityY = 0;
             jumpCount = 0;
+            jumpTime = 0; // Reset thời gian charge
         }
 
         if (chickenRect.y <= TOP_BOUNDARY) {
             chickenRect.y = TOP_BOUNDARY;
             velocityY = 0;
         }
+    }
+
+    // Xử lý di chuyển trái/phải dựa trên trạng thái phím
+    const Uint8* keystate = SDL_GetKeyboardState(NULL);
+    if (keystate[SDL_SCANCODE_LEFT] && chickenRect.x > LEFT_BOUNDARY) {
+        chickenRect.x -= CHICKEN_SPEED;
+    }
+    else if (keystate[SDL_SCANCODE_RIGHT] && chickenRect.x + chickenRect.w < RIGHT_BOUNDARY) {
+        chickenRect.x += CHICKEN_SPEED;
     }
 }
 

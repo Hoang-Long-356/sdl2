@@ -40,8 +40,8 @@ void Map::render(bool isMenu) {
         SDL_RenderCopy(renderer, menuTexture, nullptr, &menuRect);
 
         // Hiển thị nút start ở chính giữa
-        int startWidth = 200;  // Giả sử chiều rộng của start.png là 200px (có thể điều chỉnh)
-        int startHeight = 100; // Giả sử chiều cao của start.png là 100px (có thể điều chỉnh)
+        int startWidth = 182;  // Giả sử chiều rộng của start.png là 182px (có thể điều chỉnh)
+        int startHeight = 60; // Giả sử chiều cao của start.png là 60px (có thể điều chỉnh)
         SDL_Rect startRect = {
             (SCREEN_WIDTH - startWidth) / 2,  // Chính giữa theo trục x
             (SCREEN_HEIGHT - startHeight) / 2, // Chính giữa theo trục y

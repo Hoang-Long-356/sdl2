@@ -109,16 +109,16 @@ int main(int argc, char* argv[]) {
         frameStart = SDL_GetTicks();
 
         SDL_Event event;
-        while (SDL_PollEvent(&event)) {
+        while (SDL_PollEvent(&event) && isMenu) {
             if (event.type == SDL_QUIT) {
-                running = false;
+                running = false; // Thoát khi đóng cửa sổ
             }
             if (isMenu && event.type == SDL_MOUSEBUTTONDOWN) {
                 int x = event.button.x;
                 int y = event.button.y;
-                // Kiểm tra nếu nhấp vào vùng nút start (giả sử start.png là 200x100px)
-                int startWidth = 200;
-                int startHeight = 100;
+                // Kiểm tra nếu nhấp vào vùng nút start 182x60px
+                int startWidth = 182;
+                int startHeight = 60;
                 int startX = (SCREEN_WIDTH - startWidth) / 2;
                 int startY = (SCREEN_HEIGHT - startHeight) / 2;
                 if (x >= startX && x <= startX + startWidth && y >= startY && y <= startY + startHeight) {
@@ -127,9 +127,9 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
-
         if (!isMenu) {
-            running = chicken.handleInput(); // Xử lý input từ người chơi
+            // Xử lý input liên tục cho chicken (di chuyển trái/phải và nhảy)
+            running = chicken.handleInput(event); // Gọi handleInput để xử lý tất cả đầu vào (bao gồm nhảy)
             chicken.update(); // Cập nhật trạng thái của gà
 
             Uint32 currentTime = SDL_GetTicks() - gameStartTime; // Thời gian đã trôi qua kể từ khi game bắt đầu
