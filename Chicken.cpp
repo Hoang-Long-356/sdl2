@@ -10,12 +10,11 @@ const int CHARGE_RATE = 1;
 const int MAX_CHARGE_TIME = 15;
 const float SECOND_JUMP_FACTOR = 0.9f;
 const int SCREEN_WIDTH = 900;
-const int CHICKEN_WIDTH = 200;
 
-const int LEFT_BOUNDARY = 255;
-const int RIGHT_BOUNDARY = 670;
-const int GROUND_LEVEL = 550;
-const int TOP_BOUNDARY = 61;
+const int LEFT_BOUNDARY = 250;
+const int RIGHT_BOUNDARY = 651;
+const int GROUND_LEVEL = 528;
+const int TOP_BOUNDARY = 60;
 
 Chicken::Chicken(SDL_Renderer* renderer)
     : renderer(renderer), velocityY(0), isJumping(false), facingLeft(false),
