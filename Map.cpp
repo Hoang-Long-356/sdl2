@@ -31,6 +31,11 @@ Map::Map(SDL_Renderer* renderer) : renderer(renderer), isGameOverMenu(false) {
         std::cout << "Không thể tải number.png\n";
     }
 
+    stopTexture = loadTexture("images/stop.png"); // Tải stop.png
+    if (!stopTexture) {
+        std::cout << "Không thể tải stop.png\n";
+    }
+
     numberClips[0] = {0, 0, 94, 121};
     numberClips[1] = {94, 0, 94, 121};
     numberClips[2] = {188, 0, 94, 121};
@@ -49,6 +54,7 @@ Map::~Map() {
     SDL_DestroyTexture(gameOverMenuTexture);
     SDL_DestroyTexture(startTexture);
     SDL_DestroyTexture(numberTexture);
+    SDL_DestroyTexture(stopTexture); // Giải phóng stopTexture
 }
 
 SDL_Texture* Map::loadTexture(const char* path) {
@@ -87,16 +93,15 @@ void Map::setGameOverMenu(bool state) {
 
 void Map::renderScore(int score, SDL_Renderer* renderer, int scale) {
     std::string scoreStr = std::to_string(score);
-    int digitWidth = 94 / scale;  // Chiều rộng mỗi số sau khi thu nhỏ
-    int digitHeight = 121 / scale; // Chiều cao mỗi số sau khi thu nhỏ
+    int digitWidth = 94 / scale;
+    int digitHeight = 121 / scale;
     int totalWidth = scoreStr.length() * digitWidth;
-    int startX = (SCREEN_WIDTH - totalWidth) / 2; // Căn giữa theo mặc định
-    int y = SCREEN_HEIGHT / 2 - digitHeight / 2 - 195; // Căn giữa theo mặc định
+    int startX = (SCREEN_WIDTH - totalWidth) / 2;
+    int y = SCREEN_HEIGHT / 2 - digitHeight / 2 - 195;
 
-    // Nếu scale > 1 (thu nhỏ), điều chỉnh vị trí cho góc trái trên
     if (scale > 1) {
-        startX = 45; // Cách mép trái 10px
-        y = 45;      // Cách mép trên 10px
+        startX = 50;
+        y = 50;
     }
 
     for (size_t i = 0; i < scoreStr.length(); i++) {
@@ -104,4 +109,14 @@ void Map::renderScore(int score, SDL_Renderer* renderer, int scale) {
         SDL_Rect destRect = {static_cast<int>(startX + i * digitWidth), y, digitWidth, digitHeight};
         SDL_RenderCopy(renderer, numberTexture, &numberClips[digit], &destRect);
     }
+}
+
+void Map::renderPause(SDL_Renderer* renderer) {
+    // Giả sử stop.png có kích thước 400x200 (có thể điều chỉnh tùy theo ảnh thực tế)
+    int stopWidth = 120;
+    int stopHeight = 100;
+    int stopX = (SCREEN_WIDTH - stopWidth) / 2;
+    int stopY = (SCREEN_HEIGHT - stopHeight) / 2;
+    SDL_Rect stopRect = {stopX, stopY, stopWidth, stopHeight};
+    SDL_RenderCopy(renderer, stopTexture, nullptr, &stopRect);
 }

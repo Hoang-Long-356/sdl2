@@ -23,7 +23,7 @@ Chicken::Chicken(SDL_Renderer* renderer)
     idleTexture = loadTexture("images/chicken.png");
     runTexture = loadTexture("images/chickenrun.png");
     currentTexture = idleTexture;
-    chickenRect = {SCREEN_WIDTH / 2, GROUND_LEVEL, 60, 63}; // Kích thước ban đầu cho idle (60x63)
+    chickenRect = {SCREEN_WIDTH / 2 - 500, GROUND_LEVEL, 60, 63}; // Kích thước ban đầu cho idle (60x63)
     setupAnimation();
 }
 
@@ -39,22 +39,20 @@ SDL_Texture* Chicken::loadTexture(const char* path) {
 }
 
 void Chicken::setupAnimation() {
-    // Idle: 6 frame cho chicken.png (3 cột x 2 hàng)
-    idleClips[0] = {0, 0, 60, 65};      // Cột 0, hàng 0
-    idleClips[1] = {60, 0, 60, 65};     // Cột 1, hàng 0
-    idleClips[2] = {120, 0, 60, 65};    // Cột 2, hàng 0
-    idleClips[3] = {0, 65, 60, 65};     // Cột 0, hàng 1
-    idleClips[4] = {60, 65, 60, 65};    // Cột 1, hàng 1
-    idleClips[5] = {120, 65, 60, 65};   // Cột 2, hàng 1
+    idleClips[0] = {0, 0, 60, 65};
+    idleClips[1] = {60, 0, 60, 65};
+    idleClips[2] = {120, 0, 60, 65};
+    idleClips[3] = {0, 65, 60, 65};
+    idleClips[4] = {60, 65, 60, 65};
+    idleClips[5] = {120, 65, 60, 65};
 
-    // Run: 7 frame cho chickenrun.png (3 cột x 3 hàng, lấy theo hàng, kích thước 60x57)
-    runClips[0] = {0, 0, 60, 57};       // Hàng 0, cột 0
-    runClips[1] = {60, 0, 60, 57};      // Hàng 0, cột 1
-    runClips[2] = {120, 0, 60, 57};     // Hàng 0, cột 2
-    runClips[3] = {0, 57, 60, 57};      // Hàng 1, cột 0
-    runClips[4] = {60, 57, 60, 57};     // Hàng 1, cột 1
-    runClips[5] = {120, 57, 60, 57};    // Hàng 1, cột 2
-    runClips[6] = {0, 114, 60, 57};     // Hàng 2, cột 0
+    runClips[0] = {0, 0, 60, 57};
+    runClips[1] = {60, 0, 60, 57};
+    runClips[2] = {120, 0, 60, 57};
+    runClips[3] = {0, 57, 60, 57};
+    runClips[4] = {60, 57, 60, 57};
+    runClips[5] = {120, 57, 60, 57};
+    runClips[6] = {0, 114, 60, 57};
 }
 
 bool Chicken::handleInput(const SDL_Event& event) {
@@ -76,7 +74,6 @@ bool Chicken::handleInput(const SDL_Event& event) {
         }
     }
 
-    // Kiểm tra trạng thái phím để charge jump
     const Uint8* keystate = SDL_GetKeyboardState(NULL);
     if (keystate[SDL_SCANCODE_UP] && isJumping && jumpCount == 1) {
         if (jumpTime < MAX_CHARGE_TIME) {
@@ -88,18 +85,15 @@ bool Chicken::handleInput(const SDL_Event& event) {
         }
     }
 
-    // Cập nhật trạng thái di chuyển dựa trên trạng thái phím
     bool wasMoving = isMoving;
     isMoving = keystate[SDL_SCANCODE_LEFT] || keystate[SDL_SCANCODE_RIGHT];
 
-    // Cập nhật hướng mặt
     if (keystate[SDL_SCANCODE_LEFT] && chickenRect.x > LEFT_BOUNDARY) {
         facingLeft = true;
     } else if (keystate[SDL_SCANCODE_RIGHT] && chickenRect.x + chickenRect.w < RIGHT_BOUNDARY) {
         facingLeft = false;
     }
 
-    // Cập nhật texture và animation
     if (isMoving && currentTexture != runTexture) {
         currentTexture = runTexture;
         chickenRect.w = 60;
@@ -122,7 +116,6 @@ bool Chicken::handleInput(const SDL_Event& event) {
 }
 
 void Chicken::update() {
-    // Xử lý nhảy
     if (isJumping) {
         velocityY += GRAVITY;
         chickenRect.y += velocityY;
@@ -141,7 +134,6 @@ void Chicken::update() {
         }
     }
 
-    // Xử lý di chuyển trái/phải dựa trên trạng thái phím
     const Uint8* keystate = SDL_GetKeyboardState(NULL);
     if (keystate[SDL_SCANCODE_LEFT] && chickenRect.x > LEFT_BOUNDARY) {
         chickenRect.x -= CHICKEN_SPEED;
@@ -153,4 +145,14 @@ void Chicken::update() {
 void Chicken::render() {
     SDL_Rect* currentClip = (currentTexture == idleTexture) ? &idleClips[frame] : &runClips[frame];
     SDL_RenderCopyEx(renderer, currentTexture, currentClip, &chickenRect, 0, nullptr, facingLeft ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+}
+
+void Chicken::resetPosition() {
+    chickenRect.x = SCREEN_WIDTH / 2; // Đặt lại vị trí giữa màn hình
+    chickenRect.y = GROUND_LEVEL;     // Đặt lại trên mặt đất
+    velocityY = 0;                    // Đặt lại vận tốc
+    isJumping = false;                // Không nhảy
+    jumpCount = 0;                    // Reset số lần nhảy
+    jumpTime = 0;                     // Reset thời gian nhảy
+    facingLeft = false;               // Hướng mặt mặc định
 }

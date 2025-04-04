@@ -7,14 +7,17 @@
 #include "Saw.h"
 #include <vector>
 #include <cmath>
+#include <fstream>
 
-const int SCREEN_WIDTH = 900;
-const int SCREEN_HEIGHT = 700;
-const int GROUND_LEVEL = 528;
+// Các hằng số màn hình
+const int SCREEN_WIDTH = 900;  // Chiều rộng màn hình game
+const int SCREEN_HEIGHT = 700; // Chiều cao màn hình game
+const int GROUND_LEVEL = 528;  // Mức mặt đất (từ Chicken.h)
 
-SDL_Window* window = nullptr;
-SDL_Renderer* renderer = nullptr;
-Mix_Music* backgroundMusic = nullptr;
+// Các biến toàn cục quan trọng
+SDL_Window* window = nullptr;       // Con trỏ đến cửa sổ game
+SDL_Renderer* renderer = nullptr;   // Con trỏ đến renderer để vẽ đồ họa
+Mix_Music* backgroundMusic = nullptr; // Con trỏ đến nhạc nền
 
 bool init() {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
@@ -54,11 +57,11 @@ void cleanUp() {
 }
 
 struct SawInfo {
-    Saw* saw;
-    Uint32 lastAppearTime;
-    Uint32 initialDelay;
-    Uint32 reappearInterval;
-    bool jumpedOver;
+    Saw* saw;              // Con trỏ đến đối tượng cưa
+    Uint32 lastAppearTime; // Thời gian cưa xuất hiện lần cuối (ms)
+    Uint32 initialDelay;   // Thời gian trì hoãn ban đầu trước khi cưa xuất hiện (ms)
+    Uint32 reappearInterval; // Khoảng thời gian tái xuất hiện của cưa (ms)
+    bool jumpedOver;       // Cờ đánh dấu cưa đã bị gà nhảy qua chưa
 
     SawInfo(SDL_Renderer* renderer, Uint32 initDelay, Uint32 reappear) 
         : saw(nullptr), lastAppearTime(0), initialDelay(initDelay), reappearInterval(reappear), jumpedOver(false) {}
@@ -90,8 +93,8 @@ bool checkCircleCollision(const SDL_Rect& rect1, const SDL_Rect& rect2) {
     float centerX2 = rect2.x + rect2.w / 2.0f;
     float centerY2 = rect2.y + rect2.h / 2.0f;
 
-    float radius1 = (rect1.w - 4) / 2.0f; // Giữ nguyên như bạn đã thay đổi
-    float radius2 = (rect2.w - 4) / 2.0f; // Giữ nguyên như bạn đã thay đổi
+    float radius1 = (rect1.w - 4) / 2.0f;
+    float radius2 = (rect2.w - 4) / 2.0f;
 
     float dx = centerX2 - centerX1;
     float dy = centerY2 - centerY1;
@@ -119,28 +122,37 @@ int main(int argc, char* argv[]) {
     Chicken chicken(renderer);
     Map gameMap(renderer);
 
-    std::vector<SawInfo> sawInfos;
-    Uint32 gameStartTime = 0;
-    bool isPlaying = false;
-    bool isGameOver = false;
-    int score = 0;
-    int highScore = 0;
+    std::vector<SawInfo> sawInfos; // Danh sách các cưa
+    Uint32 gameStartTime = 0;      // Thời gian bắt đầu game (ms)
+    bool isPlaying = false;        // Trạng thái đang chơi game
+    bool isGameOver = false;       // Trạng thái game over
+    bool isPaused = false;         // Trạng thái tạm dừng game
+    int score = 0;                 // Điểm số hiện tại
+    int highScore = 0;             // Điểm cao nhất
+
+    std::ifstream inFile("highscore.txt");
+    if (inFile.is_open()) {
+        inFile >> highScore;
+        inFile.close();
+    }
 
     sawInfos.emplace_back(renderer, 500, 10000);
     sawInfos.emplace_back(renderer, 2000, 10000);
     sawInfos.emplace_back(renderer, 4000, 10000);
+    sawInfos.emplace_back(renderer, 6000, 10000);
     sawInfos.emplace_back(renderer, 8000, 10000);
+    sawInfos.emplace_back(renderer, 10000, 10000);
     sawInfos.emplace_back(renderer, 12000, 10000);
-    sawInfos.emplace_back(renderer, 18000, 10000);
+    sawInfos.emplace_back(renderer, 14000, 10000);
 
-    bool running = true;
-    Uint32 frameStart;
-    int frameTime;
-    const int FRAME_TARGET_TIME = 1000 / 60;
+    bool running = true;           // Trạng thái vòng lặp chính của game
+    Uint32 frameStart;             // Thời gian bắt đầu khung hình (ms)
+    int frameTime;                 // Thời gian thực hiện một khung hình (ms)
+    const int FRAME_TARGET_TIME = 1000 / 60; // Thời gian mục tiêu cho 60 FPS
 
     while (running) {
         frameStart = SDL_GetTicks();
-
+    
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
@@ -160,7 +172,13 @@ int main(int argc, char* argv[]) {
                     gameStartTime = SDL_GetTicks();
                     gameMap.setGameOverMenu(false);
                     score = 0;
+                    chicken.resetPosition();
                     for (auto& info : sawInfos) {
+                        if (info.saw) {
+                            delete info.saw;
+                            info.saw = nullptr;
+                        }
+                        info.lastAppearTime = 0;
                         info.jumpedOver = false;
                     }
                 }
@@ -168,7 +186,6 @@ int main(int argc, char* argv[]) {
             if (isGameOver && event.type == SDL_MOUSEBUTTONDOWN) {
                 int x = event.button.x;
                 int y = event.button.y;
-                // Kiểm tra nút chơi lại
                 int restartWidth = 200;
                 int restartHeight = 100;
                 int restartX = (SCREEN_WIDTH - restartWidth) / 2;
@@ -179,35 +196,75 @@ int main(int argc, char* argv[]) {
                     gameStartTime = SDL_GetTicks();
                     gameMap.setGameOverMenu(false);
                     score = 0;
+                    chicken.resetPosition();
                     for (auto& info : sawInfos) {
                         if (info.saw) {
                             delete info.saw;
                             info.saw = nullptr;
-                            info.lastAppearTime = 0;
                         }
+                        info.lastAppearTime = 0;
                         info.jumpedOver = false;
                     }
                 }
-                // Kiểm tra nút outgame (nằm dưới nút chơi lại)
                 int outgameWidth = 200;
                 int outgameHeight = 100;
                 int outgameX = (SCREEN_WIDTH - outgameWidth) / 2;
-                int outgameY = restartY + restartHeight + 10; // Cách nút chơi lại 10px
+                int outgameY = restartY + restartHeight + 10;
                 if (x >= outgameX && x <= outgameX + outgameWidth && y >= outgameY && y <= outgameY + outgameHeight) {
-                    running = false; // Thoát game
+                    running = false;
                 }
             }
+            if (isPlaying && !isGameOver && !isPaused && event.type == SDL_MOUSEBUTTONDOWN) {
+                int x = event.button.x;
+                int y = event.button.y;
+                int pauseWidth = 38;
+                int pauseHeight = 40;
+                int pauseX = SCREEN_WIDTH - pauseWidth - 70;
+                int pauseY = 30;
+                if (x >= pauseX && x <= pauseX + pauseWidth && y >= pauseY && y <= pauseY + pauseHeight) {
+                    isPaused = true; // Tạm dừng game khi nhấn nút pause
+                }
+            }
+            if (isPaused && event.type == SDL_MOUSEBUTTONDOWN) {
+                int x = event.button.x;
+                int y = event.button.y;
+                int stopWidth = 116;  // Chiều rộng của stop.png
+                int stopHeight = 101; // Chiều cao của stop.png
+                int stopX = (SCREEN_WIDTH - stopWidth) / 2; // Tọa độ x căn giữa
+                int stopY = (SCREEN_HEIGHT - stopHeight) / 2; // Tọa độ y căn giữa
+                // Phần trên (tiếp tục chơi): 116x101px
+                if (x >= stopX && x <= stopX + stopWidth && y >= stopY && y <= stopY + stopHeight / 2) {
+                    isPaused = false; // Tiếp tục chơi
+                }
+                // Phần dưới (chuyển sang menu2.png): 116x101px
+                if (x >= stopX && x <= stopX + stopWidth && y > stopY + stopHeight / 2 && y <= stopY + stopHeight) {
+                    isPaused = false;
+                    isPlaying = false;
+                    isGameOver = true;
+                    gameMap.setGameOverMenu(true);
+                    if (score > highScore) {
+                        highScore = score;
+                        std::ofstream outFile("highscore.txt");
+                        if (outFile.is_open()) {
+                            outFile << highScore;
+                            outFile.close();
+                        }
+                    }
+                }
+            }
+    
             if (isPlaying && !isGameOver) {
                 running = chicken.handleInput(event);
             }
         }
-
-        if (isPlaying && !isGameOver) {
+    
+        // Phần còn lại của vòng lặp main giữ nguyên
+        if (isPlaying && !isGameOver && !isPaused) {
             chicken.update();
             running = chicken.handleInput(event);
-            
+    
             Uint32 currentTime = SDL_GetTicks() - gameStartTime;
-
+    
             for (auto& info : sawInfos) {
                 if (!info.saw) {
                     if (info.lastAppearTime == 0) {
@@ -225,9 +282,9 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
-
+    
             updateSaws(sawInfos);
-
+    
             const SDL_Rect& chickenRect = chicken.getRect();
             for (auto& info : sawInfos) {
                 if (info.saw) {
@@ -239,7 +296,14 @@ int main(int argc, char* argv[]) {
                         isPlaying = false;
                         isGameOver = true;
                         gameMap.setGameOverMenu(true);
-                        if (score > highScore) highScore = score;
+                        if (score > highScore) {
+                            highScore = score;
+                            std::ofstream outFile("highscore.txt");
+                            if (outFile.is_open()) {
+                                outFile << highScore;
+                                outFile.close();
+                            }
+                        }
                         for (auto& sawInfo : sawInfos) {
                             if (sawInfo.saw) {
                                 delete sawInfo.saw;
@@ -252,49 +316,59 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
-
+    
             if (!chicken.isChickenJumping()) {
                 for (auto& info : sawInfos) {
                     if (info.saw && info.jumpedOver) {
                         delete info.saw;
                         info.saw = nullptr;
-                        info.lastAppearTime = 0;
                         info.jumpedOver = false;
                         score++;
                     }
                 }
             }
         }
-
+    
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
-
+    
         gameMap.render(isGameOver || !isPlaying);
-
+    
         if (isPlaying && !isGameOver) {
             chicken.render();
             renderSaws(sawInfos, renderer);
         }
-
+    
         if (isGameOver) {
-            gameMap.renderScore(score, renderer); // Điểm hiện tại
-            gameMap.renderScore(highScore, renderer, 7); // Điểm lớn nhất
+            gameMap.renderScore(score, renderer);
+            gameMap.renderScore(highScore, renderer, 7);
         }
-
+    
+        if (isPaused) {
+            gameMap.renderPause(renderer);
+        }
+    
         SDL_RenderPresent(renderer);
-
+    
         frameTime = SDL_GetTicks() - frameStart;
         if (frameTime < FRAME_TARGET_TIME) {
             SDL_Delay(FRAME_TARGET_TIME - frameTime);
         }
     }
-
+    
+    // Phần còn lại của main (clean up, v.v.) giữ nguyên
+    std::ofstream outFile("highscore.txt");
+    if (outFile.is_open()) {
+        outFile << highScore;
+        outFile.close();
+    }
+    
     for (auto& info : sawInfos) {
         if (info.saw) {
             delete info.saw;
         }
     }
-
+    
     cleanUp();
     return 0;
 }
