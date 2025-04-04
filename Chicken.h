@@ -13,6 +13,7 @@ public:
     bool handleInput(const SDL_Event& event); // Chỉ nhận sự kiện từ main.cpp
     void render();
 
+    // Các hằng số tĩnh
     static const int MIN_JUMP_FORCE = -10;    // Độ cao tối thiểu (lực nhảy tối thiểu)
     static const int GRAVITY = 1;             // Trọng lực
     static const int JUMP_LIMIT = 2;          // Số lần nhảy tối đa
@@ -28,6 +29,15 @@ public:
     static const int TOP_BOUNDARY = 60;       // Ranh giới trên
     static const int FRAME_DELAY = 5;         // Độ trễ giữa các frame animation
 
+    // Thêm phương thức để lấy rect của gà cho kiểm tra va chạm
+    const SDL_Rect& getRect() const { return chickenRect; }
+
+    // Thêm phương thức để kiểm tra trạng thái nhảy
+    bool isChickenJumping() const { return isJumping; }
+
+    // Thêm phương thức để lấy mức mặt đất
+    int getGroundLevel() const { return GROUND_LEVEL; }
+
 private:
     SDL_Rect idleClips[6];          // 6 frame cho chicken.png (60x65)
     SDL_Rect runClips[7];           // 7 frame cho chickenrun.png (60x59)
@@ -36,9 +46,9 @@ private:
     SDL_Texture* idleTexture;       // Texture khi đứng yên
     SDL_Texture* runTexture;        // Texture khi chạy
     SDL_Texture* currentTexture;    // Texture hiện tại
-    SDL_Rect chickenRect;
+    SDL_Rect chickenRect;           // Vị trí và kích thước của gà
     int velocityY;
-    bool isJumping;
+    bool isJumping;                 // Thuộc tính private để theo dõi trạng thái nhảy
     bool facingLeft;
     int frame;
     int frameCounter;

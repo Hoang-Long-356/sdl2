@@ -102,3 +102,8 @@ bool Saw::update() {
 void Saw::render() const {
     SDL_RenderCopy(renderer, texture, &clips[currentFrame], &rect); // Vẽ cưa với khung hình hiện tại
 }
+
+// Thêm phương thức để lấy rect của cưa
+const SDL_Rect& Saw::getRect() const {
+    return rect;
+}

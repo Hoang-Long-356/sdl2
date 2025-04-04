@@ -40,7 +40,6 @@ SDL_Texture* Chicken::loadTexture(const char* path) {
 
 void Chicken::setupAnimation() {
     // Idle: 6 frame cho chicken.png (3 cột x 2 hàng)
-    // Lấy 6 frame: Cột 0, 1, 2 ở hàng 0 và Cột 0, 1, 2 ở hàng 1
     idleClips[0] = {0, 0, 60, 65};      // Cột 0, hàng 0
     idleClips[1] = {60, 0, 60, 65};     // Cột 1, hàng 0
     idleClips[2] = {120, 0, 60, 65};    // Cột 2, hàng 0
@@ -96,8 +95,7 @@ bool Chicken::handleInput(const SDL_Event& event) {
     // Cập nhật hướng mặt
     if (keystate[SDL_SCANCODE_LEFT] && chickenRect.x > LEFT_BOUNDARY) {
         facingLeft = true;
-    }
-    else if (keystate[SDL_SCANCODE_RIGHT] && chickenRect.x + chickenRect.w < RIGHT_BOUNDARY) {
+    } else if (keystate[SDL_SCANCODE_RIGHT] && chickenRect.x + chickenRect.w < RIGHT_BOUNDARY) {
         facingLeft = false;
     }
 
@@ -124,7 +122,7 @@ bool Chicken::handleInput(const SDL_Event& event) {
 }
 
 void Chicken::update() {
-    // Xử lý nhảy như trước
+    // Xử lý nhảy
     if (isJumping) {
         velocityY += GRAVITY;
         chickenRect.y += velocityY;
@@ -134,7 +132,7 @@ void Chicken::update() {
             isJumping = false;
             velocityY = 0;
             jumpCount = 0;
-            jumpTime = 0; // Reset thời gian charge
+            jumpTime = 0;
         }
 
         if (chickenRect.y <= TOP_BOUNDARY) {
@@ -147,8 +145,7 @@ void Chicken::update() {
     const Uint8* keystate = SDL_GetKeyboardState(NULL);
     if (keystate[SDL_SCANCODE_LEFT] && chickenRect.x > LEFT_BOUNDARY) {
         chickenRect.x -= CHICKEN_SPEED;
-    }
-    else if (keystate[SDL_SCANCODE_RIGHT] && chickenRect.x + chickenRect.w < RIGHT_BOUNDARY) {
+    } else if (keystate[SDL_SCANCODE_RIGHT] && chickenRect.x + chickenRect.w < RIGHT_BOUNDARY) {
         chickenRect.x += CHICKEN_SPEED;
     }
 }

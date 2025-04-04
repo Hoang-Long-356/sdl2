@@ -15,6 +15,9 @@ public:
     static void updateSaws(std::vector<Saw>& saws); // Cập nhật tất cả cưa trong danh sách
     static void renderSaws(const std::vector<Saw>& saws, SDL_Renderer* renderer); // Vẽ tất cả cưa
 
+    // Thêm phương thức để lấy rect của cưa
+    const SDL_Rect& getRect() const;
+
 private:
     SDL_Renderer* renderer; // Con trỏ đến renderer để vẽ cưa
     SDL_Texture* texture; // Texture chứa hình ảnh cưa (saw.png)

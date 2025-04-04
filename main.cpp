@@ -6,34 +6,36 @@
 #include "Map.h"
 #include "Saw.h"
 #include <vector>
+#include <cmath>
 
-const int SCREEN_WIDTH = 900; // Chiều rộng màn hình game (pixel)
-const int SCREEN_HEIGHT = 700; // Chiều cao màn hình game (pixel)
+const int SCREEN_WIDTH = 900;
+const int SCREEN_HEIGHT = 700;
+const int GROUND_LEVEL = 528;
 
-SDL_Window* window = nullptr; // Con trỏ đến cửa sổ game
-SDL_Renderer* renderer = nullptr; // Con trỏ đến renderer để vẽ
-Mix_Music* backgroundMusic = nullptr; // Con trỏ đến nhạc nền
+SDL_Window* window = nullptr;
+SDL_Renderer* renderer = nullptr;
+Mix_Music* backgroundMusic = nullptr;
 
 bool init() {
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) { // Khởi tạo SDL với video và âm thanh
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         std::cout << "SDL Init failed: " << SDL_GetError() << std::endl;
         return false;
     }
 
     window = SDL_CreateWindow("Chicken and Sawblades", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                              SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN); // Tạo cửa sổ game
+                              SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     if (!window) return false;
 
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED); // Tạo renderer tăng tốc phần cứng
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     if (!renderer) return false;
 
-    IMG_Init(IMG_INIT_PNG); // Khởi tạo SDL_image để tải file PNG
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) { // Khởi tạo SDL_mixer để phát âm thanh
+    IMG_Init(IMG_INIT_PNG);
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
         std::cout << "SDL_mixer Init failed: " << Mix_GetError() << std::endl;
         return false;
     }
 
-    backgroundMusic = Mix_LoadMUS("music.mp3"); // Tải file nhạc nền
+    backgroundMusic = Mix_LoadMUS("music.mp3");
     if (!backgroundMusic) {
         std::cout << "Failed to load music: " << Mix_GetError() << std::endl;
         return false;
@@ -43,30 +45,32 @@ bool init() {
 }
 
 void cleanUp() {
-    Mix_FreeMusic(backgroundMusic); // Giải phóng nhạc nền
-    Mix_CloseAudio(); // Đóng SDL_mixer
-    SDL_DestroyRenderer(renderer); // Hủy renderer
-    SDL_DestroyWindow(window); // Hủy cửa sổ
-    IMG_Quit(); // Thoát SDL_image
-    SDL_Quit(); // Thoát SDL
+    Mix_FreeMusic(backgroundMusic);
+    Mix_CloseAudio();
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    IMG_Quit();
+    SDL_Quit();
 }
 
 struct SawInfo {
     Saw* saw;
-    Uint32 lastAppearTime; // Thời gian cưa cuối cùng xuất hiện
-    Uint32 initialDelay;   // Thời gian trì hoãn ban đầu
-    Uint32 reappearInterval; // Khoảng thời gian tái xuất hiện
+    Uint32 lastAppearTime;
+    Uint32 initialDelay;
+    Uint32 reappearInterval;
+    bool jumpedOver;
 
     SawInfo(SDL_Renderer* renderer, Uint32 initDelay, Uint32 reappear) 
-        : saw(nullptr), lastAppearTime(0), initialDelay(initDelay), reappearInterval(reappear) {}
+        : saw(nullptr), lastAppearTime(0), initialDelay(initDelay), reappearInterval(reappear), jumpedOver(false) {}
 };
 
 void updateSaws(std::vector<SawInfo>& sawInfos) {
     for (auto& info : sawInfos) {
         if (info.saw) {
-            if (info.saw->update()) { // Nếu cưa bị xóa (chạm biên trên)
-                delete info.saw; // Giải phóng bộ nhớ
+            if (info.saw->update()) {
+                delete info.saw;
                 info.saw = nullptr;
+                info.jumpedOver = false;
             }
         }
     }
@@ -75,104 +79,216 @@ void updateSaws(std::vector<SawInfo>& sawInfos) {
 void renderSaws(const std::vector<SawInfo>& sawInfos, SDL_Renderer* renderer) {
     for (const auto& info : sawInfos) {
         if (info.saw) {
-            info.saw->render(); // Vẽ cưa nếu tồn tại
+            info.saw->render();
         }
     }
+}
+
+bool checkCircleCollision(const SDL_Rect& rect1, const SDL_Rect& rect2) {
+    float centerX1 = rect1.x + rect1.w / 2.0f;
+    float centerY1 = rect1.y + rect1.h / 2.0f;
+    float centerX2 = rect2.x + rect2.w / 2.0f;
+    float centerY2 = rect2.y + rect2.h / 2.0f;
+
+    float radius1 = (rect1.w - 4) / 2.0f; // Giữ nguyên như bạn đã thay đổi
+    float radius2 = (rect2.w - 4) / 2.0f; // Giữ nguyên như bạn đã thay đổi
+
+    float dx = centerX2 - centerX1;
+    float dy = centerY2 - centerY1;
+    float distance = std::sqrt(dx * dx + dy * dy);
+
+    return distance < (radius1 + radius2);
+}
+
+bool checkJumpOverSaw(const SDL_Rect& chickenRect, const SDL_Rect& sawRect) {
+    bool isHigher = chickenRect.y + chickenRect.h < sawRect.y;
+    float centerX1 = chickenRect.x + chickenRect.w / 2.0f;
+    float centerX2 = sawRect.x + sawRect.w / 2.0f;
+    float dx = std::abs(centerX2 - centerX1);
+    float totalWidth = (chickenRect.w + sawRect.w) / 2.0f;
+    bool isAligned = dx < totalWidth;
+
+    return isHigher && isAligned;
 }
 
 int main(int argc, char* argv[]) {
     if (!init()) return -1;
 
-    Mix_PlayMusic(backgroundMusic, -1); // Phát nhạc nền lặp vô hạn
+    Mix_PlayMusic(backgroundMusic, -1);
 
-    Chicken chicken(renderer); // Đối tượng gà (nhân vật chính)
-    Map gameMap(renderer); // Đối tượng bản đồ game
+    Chicken chicken(renderer);
+    Map gameMap(renderer);
 
-    std::vector<SawInfo> sawInfos; // Danh sách thông tin cưa
-    Uint32 gameStartTime = 0; // Thời gian bắt đầu game (sẽ được đặt sau khi thoát menu)
-    bool isMenu = true; // Trạng thái ban đầu là menu
+    std::vector<SawInfo> sawInfos;
+    Uint32 gameStartTime = 0;
+    bool isPlaying = false;
+    bool isGameOver = false;
+    int score = 0;
+    int highScore = 0;
 
-    // Khởi tạo thông tin cho các cưa s1, s2, s3, s4, s5, s6
-    sawInfos.emplace_back(renderer, 500, 10000);  // Cưa s1: xuất hiện sau 0.5s, tái xuất sau 10s
-    sawInfos.emplace_back(renderer, 2000, 10000); // Cưa s2: xuất hiện sau 2s, tái xuất sau 10s
-    sawInfos.emplace_back(renderer, 4000, 10000); // Cưa s3: xuất hiện sau 4s, tái xuất sau 10s
-    sawInfos.emplace_back(renderer, 8000, 10000); // Cưa s4: xuất hiện sau 8s, tái xuất sau 10s
-    sawInfos.emplace_back(renderer, 12000, 10000); // Cưa s5: xuất hiện sau 12s, tái xuất sau 10s
-    sawInfos.emplace_back(renderer, 18000, 10000); // Cưa s6: xuất hiện sau 18s, tái xuất sau 10s
+    sawInfos.emplace_back(renderer, 500, 10000);
+    sawInfos.emplace_back(renderer, 2000, 10000);
+    sawInfos.emplace_back(renderer, 4000, 10000);
+    sawInfos.emplace_back(renderer, 8000, 10000);
+    sawInfos.emplace_back(renderer, 12000, 10000);
+    sawInfos.emplace_back(renderer, 18000, 10000);
 
-    bool running = true; // Biến điều khiển vòng lặp game
-    Uint32 frameStart; // Thời gian bắt đầu mỗi khung hình (ms)
-    int frameTime; // Thời gian thực hiện một khung hình (ms)
-    const int FRAME_TARGET_TIME = 1000 / 60; // Thời gian mục tiêu cho mỗi khung hình (60 FPS)
+    bool running = true;
+    Uint32 frameStart;
+    int frameTime;
+    const int FRAME_TARGET_TIME = 1000 / 60;
 
     while (running) {
         frameStart = SDL_GetTicks();
 
         SDL_Event event;
-        while (SDL_PollEvent(&event) && isMenu) {
+        while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
-                running = false; // Thoát khi đóng cửa sổ
+                running = false;
+                continue;
             }
-            if (isMenu && event.type == SDL_MOUSEBUTTONDOWN) {
+            if (!isPlaying && !isGameOver && event.type == SDL_MOUSEBUTTONDOWN) {
                 int x = event.button.x;
                 int y = event.button.y;
-                // Kiểm tra nếu nhấp vào vùng nút start 182x60px
                 int startWidth = 182;
                 int startHeight = 60;
                 int startX = (SCREEN_WIDTH - startWidth) / 2;
                 int startY = (SCREEN_HEIGHT - startHeight) / 2;
                 if (x >= startX && x <= startX + startWidth && y >= startY && y <= startY + startHeight) {
-                    isMenu = false; // Thoát menu, bắt đầu game
-                    gameStartTime = SDL_GetTicks(); // Đặt thời gian bắt đầu game
+                    isPlaying = true;
+                    isGameOver = false;
+                    gameStartTime = SDL_GetTicks();
+                    gameMap.setGameOverMenu(false);
+                    score = 0;
+                    for (auto& info : sawInfos) {
+                        info.jumpedOver = false;
+                    }
                 }
             }
-        }
-        if (!isMenu) {
-            // Xử lý input liên tục cho chicken (di chuyển trái/phải và nhảy)
-            running = chicken.handleInput(event); // Gọi handleInput để xử lý tất cả đầu vào (bao gồm nhảy)
-            chicken.update(); // Cập nhật trạng thái của gà
-
-            Uint32 currentTime = SDL_GetTicks() - gameStartTime; // Thời gian đã trôi qua kể từ khi game bắt đầu
-
-            // Kiểm tra và tạo/re-tạo cưa cho từng loại
-            for (auto& info : sawInfos) {
-                if (!info.saw) { // Nếu cưa không tồn tại
-                    if (info.lastAppearTime == 0) { // Chưa từng xuất hiện
-                        if (currentTime >= info.initialDelay) {
-                            info.saw = new Saw(renderer); // Tạo cưa mới
-                            info.lastAppearTime = currentTime; // Ghi lại thời gian xuất hiện
+            if (isGameOver && event.type == SDL_MOUSEBUTTONDOWN) {
+                int x = event.button.x;
+                int y = event.button.y;
+                // Kiểm tra nút chơi lại
+                int restartWidth = 200;
+                int restartHeight = 100;
+                int restartX = (SCREEN_WIDTH - restartWidth) / 2;
+                int restartY = (SCREEN_HEIGHT - restartHeight) / 2;
+                if (x >= restartX && x <= restartX + restartWidth && y >= restartY && y <= restartY + restartHeight) {
+                    isPlaying = true;
+                    isGameOver = false;
+                    gameStartTime = SDL_GetTicks();
+                    gameMap.setGameOverMenu(false);
+                    score = 0;
+                    for (auto& info : sawInfos) {
+                        if (info.saw) {
+                            delete info.saw;
+                            info.saw = nullptr;
+                            info.lastAppearTime = 0;
                         }
-                    } else { // Đã từng xuất hiện, kiểm tra tái xuất
+                        info.jumpedOver = false;
+                    }
+                }
+                // Kiểm tra nút outgame (nằm dưới nút chơi lại)
+                int outgameWidth = 200;
+                int outgameHeight = 100;
+                int outgameX = (SCREEN_WIDTH - outgameWidth) / 2;
+                int outgameY = restartY + restartHeight + 10; // Cách nút chơi lại 10px
+                if (x >= outgameX && x <= outgameX + outgameWidth && y >= outgameY && y <= outgameY + outgameHeight) {
+                    running = false; // Thoát game
+                }
+            }
+            if (isPlaying && !isGameOver) {
+                running = chicken.handleInput(event);
+            }
+        }
+
+        if (isPlaying && !isGameOver) {
+            chicken.update();
+            running = chicken.handleInput(event);
+            
+            Uint32 currentTime = SDL_GetTicks() - gameStartTime;
+
+            for (auto& info : sawInfos) {
+                if (!info.saw) {
+                    if (info.lastAppearTime == 0) {
+                        if (currentTime >= info.initialDelay) {
+                            info.saw = new Saw(renderer);
+                            info.lastAppearTime = currentTime;
+                            info.jumpedOver = false;
+                        }
+                    } else {
                         if (currentTime - info.lastAppearTime >= info.reappearInterval) {
-                            info.saw = new Saw(renderer); // Tái tạo cưa
-                            info.lastAppearTime = currentTime; // Cập nhật thời gian tái xuất
+                            info.saw = new Saw(renderer);
+                            info.lastAppearTime = currentTime;
+                            info.jumpedOver = false;
                         }
                     }
                 }
             }
 
-            // Cập nhật và xóa cưa
             updateSaws(sawInfos);
+
+            const SDL_Rect& chickenRect = chicken.getRect();
+            for (auto& info : sawInfos) {
+                if (info.saw) {
+                    const SDL_Rect& sawRect = info.saw->getRect();
+                    if (checkJumpOverSaw(chickenRect, sawRect)) {
+                        info.jumpedOver = true;
+                    }
+                    if (checkCircleCollision(chickenRect, sawRect)) {
+                        isPlaying = false;
+                        isGameOver = true;
+                        gameMap.setGameOverMenu(true);
+                        if (score > highScore) highScore = score;
+                        for (auto& sawInfo : sawInfos) {
+                            if (sawInfo.saw) {
+                                delete sawInfo.saw;
+                                sawInfo.saw = nullptr;
+                                sawInfo.lastAppearTime = 0;
+                                sawInfo.jumpedOver = false;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if (!chicken.isChickenJumping()) {
+                for (auto& info : sawInfos) {
+                    if (info.saw && info.jumpedOver) {
+                        delete info.saw;
+                        info.saw = nullptr;
+                        info.lastAppearTime = 0;
+                        info.jumpedOver = false;
+                        score++;
+                    }
+                }
+            }
         }
 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // Đặt màu nền đen
-        SDL_RenderClear(renderer); // Xóa màn hình
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
 
-        gameMap.render(isMenu); // Vẽ bản đồ hoặc menu tùy trạng thái
-        if (!isMenu) {
-            chicken.render(); // Vẽ gà khi không ở menu
-            renderSaws(sawInfos, renderer); // Vẽ tất cả cưa khi không ở menu
+        gameMap.render(isGameOver || !isPlaying);
+
+        if (isPlaying && !isGameOver) {
+            chicken.render();
+            renderSaws(sawInfos, renderer);
         }
 
-        SDL_RenderPresent(renderer); // Hiển thị khung hình
+        if (isGameOver) {
+            gameMap.renderScore(score, renderer); // Điểm hiện tại
+            gameMap.renderScore(highScore, renderer, 7); // Điểm lớn nhất
+        }
 
-        frameTime = SDL_GetTicks() - frameStart; // Tính thời gian khung hình
-        if (frameTime < FRAME_TARGET_TIME) { // Giữ FPS ổn định
+        SDL_RenderPresent(renderer);
+
+        frameTime = SDL_GetTicks() - frameStart;
+        if (frameTime < FRAME_TARGET_TIME) {
             SDL_Delay(FRAME_TARGET_TIME - frameTime);
         }
     }
 
-    // Giải phóng tất cả cưa còn lại khi thoát
     for (auto& info : sawInfos) {
         if (info.saw) {
             delete info.saw;
